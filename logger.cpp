@@ -28,30 +28,20 @@ std::filesystem::path getLogPath() {
     return log_path;
 }
 
-static std::string log_filename;
-union Filename {
-    std::string get() {
-        return log_filename;
+std::string getFilename(const std::string& new_name = "") {
+    static std::string log_filename;
+    if (!new_name.empty()) {
+        log_filename = new_name;
     }
-    void set(const std::string& filename) {
-        log_filename = filename;
-    }
-} filename;
-
-// std::string getFilename(const std::string& new_name = "") {
-//     static std::string log_filename;
-//     if (!new_name.empty()) {
-//         log_filename = new_name;
-//     }
-//     return log_filename;
-// }
+    return log_filename;
+}
 
 bool fileExist() {
     try {
         for (const auto& entry : std::filesystem::directory_iterator(getLogPath())) {
             // std::cout << entry.path().string() << std::endl;
 
-            if (!entry.is_directory() && entry.path().filename().string() == filename.get()) {
+            if (!entry.is_directory() && entry.path().filename().string() == getFilename()) {
                 return true;
             }
         }
@@ -96,14 +86,14 @@ std::pair<std::filesystem::path, std::uintmax_t> GetLatestFileInfo() {
 void writeInFile(const std::stringstream& log_message) {
     static constexpr std::uint32_t five_mbytes = 5 /** 1024*/ * 1024;
     const auto [latest_file, file_size] = GetLatestFileInfo();
-    if (filename.get().empty() || file_size > five_mbytes) {
+    if (getFilename().empty() || file_size > five_mbytes) {
         const std::string actual_name = !latest_file.empty() || file_size > five_mbytes ? generateFileName() : latest_file.filename().string();
-        filename.set(actual_name);
+        getFilename(actual_name);
     }
 
-    std::fstream file(getLogPath() / filename.get(), std::ios::app);
+    std::fstream file(getLogPath() / getFilename(), std::ios::app);
     if (!file) {
-        throw std::runtime_error("Cannot open the log file" + (getLogPath() / filename.get()).string());
+        throw std::runtime_error("Cannot open the log file" + (getLogPath() / getFilename()).string());
     }
 
     file << log_message.str() << '\n';
